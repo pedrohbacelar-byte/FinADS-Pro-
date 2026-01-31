@@ -1,0 +1,23 @@
+{
+    "VALE3": {
+        "quantidade": 29,
+        "preco_medio": 51.15,
+        "alerta_compra": null
+    },
+    "CMIG4.SA": {
+        "quantidade": 10,
+        "preco_medio": 10.88
+    },
+    "BBSA3.SA": {
+        "quantidade": 100,
+        "preco_medio": 24.77
+    },
+    "RURA11.SA": {
+        "quantidade": 429,
+        "preco_medio": 8.2
+    },
+    "MXRF11.SA": {
+        "quantidade": 10,
+        "preco_medio": 9.1
+    }
+}
