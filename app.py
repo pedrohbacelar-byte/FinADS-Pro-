@@ -37,7 +37,7 @@ if data:
         
         rows.append({
             "Ativo": sym.replace(".SA", ""),
-            "Categoria": info.get('category', 'Não Definida'),
+            "Categoria": info.get('category', 'Ações'),
             "Qtd": info['qty'],
             "P. Médio": round(info['avg_price'], 2),
             "Total": round(info['qty'] * curr, 2)
@@ -49,11 +49,19 @@ if data:
     with tab1:
         st.plotly_chart(px.pie(df, values='Total', names='Ativo', hole=0.3), use_container_width=True)
         st.dataframe(df, hide_index=True, use_container_width=True)
+
     with tab2:
         df_a = df[df['Categoria'] == 'Ações']
-        st.dataframe(df_a, hide_index=True, use_container_width=True) if not df_a.empty else st.info("Sem Ações.")
+        if not df_a.empty:
+            st.dataframe(df_a, hide_index=True, use_container_width=True)
+        else:
+            st.info("Nenhuma Ação na carteira.")
+
     with tab3:
         df_f = df[df['Categoria'] == 'FIIs/Fiagros']
-        st.dataframe(df_f, hide_index=True, use_container_width=True) if not df_f.empty else st.info("Sem FIIs/Fiagros.")
+        if not df_f.empty:
+            st.dataframe(df_f, hide_index=True, use_container_width=True)
+        else:
+            st.info("Nenhum FII ou Fiagro na carteira.")
 else:
-    st.warning("O sistema está pronto. Cadastre um ativo no menu lateral.")
+    st.warning("O sistema está pronto. Cadastre um ativo no menu lateral para iniciar.")
