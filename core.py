@@ -6,15 +6,15 @@ class FinanceEngine:
         self.file_path = file_path
         os.makedirs('data', exist_ok=True)
         if not os.path.exists(self.file_path):
-            self._save({})
+            self._write({})
+
+    def _write(self, data):
+        with open(self.file_path, 'w') as f:
+            json.dump(data, f, indent=4)
 
     def get_portfolio(self):
         with open(self.file_path, 'r') as f:
             return json.load(f)
-
-    def _save(self, data):
-        with open(self.file_path, 'w') as f:
-            json.dump(data, f, indent=4)
 
     def update_asset(self, ticker, qty, price, category, op_type):
         ticker = ticker.upper().strip()
@@ -33,10 +33,9 @@ class FinanceEngine:
         elif op_type == "Venda":
             if symbol in data and data[symbol]['qty'] >= qty:
                 data[symbol]['qty'] -= qty
-                # Se zerar, remove do dicionário para não aparecer no gráfico
                 if data[symbol]['qty'] <= 0:
                     del data[symbol]
             else:
                 raise ValueError("Saldo insuficiente")
 
-        self._save(data)
+        self._write(data)

@@ -7,48 +7,64 @@ from core import FinanceEngine
 st.set_page_config(page_title="FinADS Pro", layout="wide")
 engine = FinanceEngine()
 
+# Sidebar para cadastro
 with st.sidebar:
-    st.header("Nova Operação")
+    st.header("Cadastrar Operação")
     with st.form("trade", clear_on_submit=True):
         t = st.text_input("Ticker (ex: PETR4)").upper()
-        c = st.selectbox("Categoria", ["Ações", "FIIs", "Fiagros"])
-        o = st.radio("Tipo", ["Compra", "Venda"])
-        q = st.number_input("Qtd", min_value=1)
-        p = st.number_input("Preço", min_value=0.01)
+        c = st.selectbox("Categoria", ["Ações", "FIIs/Fiagros"])
+        o = st.radio("Operação", ["Compra", "Venda"])
+        q = st.number_input("Quantidade", min_value=1)
+        p = st.number_input("Preço Unitário", min_value=0.01)
         
-        if st.form_submit_button("Registrar"):
+        if st.form_submit_button("Confirmar"):
             try:
                 engine.update_asset(t, q, p, c, o)
                 st.rerun()
             except Exception as e:
                 st.error(str(e))
 
-st.title("🏦 Dashboard de Investimentos")
+st.title("🏦 Gestão de Ativos - ADS")
 
 data = engine.get_portfolio()
+
 if data:
     rows = []
     for sym, info in data.items():
         try:
-            # Busca preço real para o gráfico
             curr = yf.Ticker(sym).history(period="1d")['Close'].iloc[-1]
         except:
             curr = info['avg_price']
-            
+        
         rows.append({
             "Ativo": sym.replace(".SA", ""),
+            "Categoria": info['category'],
             "Qtd": info['qty'],
-            "Preço Médio": round(info['avg_price'], 2),
-            "Total Atual": round(info['qty'] * curr, 2)
+            "P. Médio": round(info['avg_price'], 2),
+            "Total": round(info['qty'] * curr, 2)
         })
     
     df = pd.DataFrame(rows)
-    col1, col2 = st.columns([1.5, 1])
     
-    with col1:
+    # Criando abas para separar Ações de FIIs
+    tab1, tab2, tab3 = st.tabs(["📊 Geral", "📈 Ações", "🏢 FIIs/Fiagros"])
+    
+    with tab1:
+        st.plotly_chart(px.pie(df, values='Total', names='Ativo', hole=0.3), use_container_width=True)
         st.dataframe(df, hide_index=True, use_container_width=True)
-    with col2:
-        fig = px.pie(df, values='Total Atual', names='Ativo', hole=0.4)
-        st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
+        df_acoes = df[df['Categoria'] == 'Ações']
+        if not df_acoes.empty:
+            st.dataframe(df_acoes, hide_index=True, use_container_width=True)
+        else:
+            st.info("Nenhuma ação cadastrada.")
+
+    with tab3:
+        df_fiis = df[df['Categoria'] == 'FIIs/Fiagros']
+        if not df_fiis.empty:
+            st.dataframe(df_fiis, hide_index=True, use_container_width=True)
+        else:
+            st.info("Nenhum FII ou Fiagro cadastrado.")
 else:
-    st.info("Carteira vazia. Adicione ativos para visualizar o gráfico.")
+    st.warning("O sistema está vazio. Use o menu lateral para cadastrar seus primeiros ativos.")
