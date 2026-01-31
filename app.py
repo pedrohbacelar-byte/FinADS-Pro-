@@ -7,7 +7,6 @@ from core import FinanceEngine
 st.set_page_config(page_title="FinADS Pro", layout="wide")
 engine = FinanceEngine()
 
-# Sidebar para cadastro
 with st.sidebar:
     st.header("Cadastrar Operação")
     with st.form("trade", clear_on_submit=True):
@@ -34,37 +33,27 @@ if data:
         try:
             curr = yf.Ticker(sym).history(period="1d")['Close'].iloc[-1]
         except:
-            curr = info['avg_price']
+            curr = info.get('avg_price', 0)
         
         rows.append({
             "Ativo": sym.replace(".SA", ""),
-            "Categoria": info['category'],
+            "Categoria": info.get('category', 'Não Definida'),
             "Qtd": info['qty'],
             "P. Médio": round(info['avg_price'], 2),
             "Total": round(info['qty'] * curr, 2)
         })
     
     df = pd.DataFrame(rows)
-    
-    # Criando abas para separar Ações de FIIs
     tab1, tab2, tab3 = st.tabs(["📊 Geral", "📈 Ações", "🏢 FIIs/Fiagros"])
     
     with tab1:
         st.plotly_chart(px.pie(df, values='Total', names='Ativo', hole=0.3), use_container_width=True)
         st.dataframe(df, hide_index=True, use_container_width=True)
-
     with tab2:
-        df_acoes = df[df['Categoria'] == 'Ações']
-        if not df_acoes.empty:
-            st.dataframe(df_acoes, hide_index=True, use_container_width=True)
-        else:
-            st.info("Nenhuma ação cadastrada.")
-
+        df_a = df[df['Categoria'] == 'Ações']
+        st.dataframe(df_a, hide_index=True, use_container_width=True) if not df_a.empty else st.info("Sem Ações.")
     with tab3:
-        df_fiis = df[df['Categoria'] == 'FIIs/Fiagros']
-        if not df_fiis.empty:
-            st.dataframe(df_fiis, hide_index=True, use_container_width=True)
-        else:
-            st.info("Nenhum FII ou Fiagro cadastrado.")
+        df_f = df[df['Categoria'] == 'FIIs/Fiagros']
+        st.dataframe(df_f, hide_index=True, use_container_width=True) if not df_f.empty else st.info("Sem FIIs/Fiagros.")
 else:
-    st.warning("O sistema está vazio. Use o menu lateral para cadastrar seus primeiros ativos.")
+    st.warning("O sistema está pronto. Cadastre um ativo no menu lateral.")

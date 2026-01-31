@@ -13,8 +13,11 @@ class FinanceEngine:
             json.dump(data, f, indent=4)
 
     def get_portfolio(self):
-        with open(self.file_path, 'r') as f:
-            return json.load(f)
+        try:
+            with open(self.file_path, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
 
     def update_asset(self, ticker, qty, price, category, op_type):
         ticker = ticker.upper().strip()
