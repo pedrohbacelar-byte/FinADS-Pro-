@@ -1,58 +1,40 @@
 import json
 import os
-import yfinance as yf
 
 class FinanceEngine:
-    def __init__(self, storage_path='data/portfolio.json'):
-        self.storage_path = storage_path
-        self._init_storage()
-
-    def _init_storage(self):
-        """Cria a pasta e o arquivo json caso não existam."""
+    def __init__(self, file_path='data/portfolio.json'):
+        self.file_path = file_path
         if not os.path.exists('data'):
             os.makedirs('data')
-        if not os.path.exists(self.storage_path):
-            with open(self.storage_path, 'w') as f:
+        if not os.path.exists(self.file_path):
+            with open(self.file_path, 'w') as f:
                 json.dump({}, f)
 
-    def get_portfolio(self):
-        with open(self.storage_path, 'r') as f:
+    def get_data(self):
+        with open(self.file_path, 'r') as f:
             return json.load(f)
 
-    def process_transaction(self, ticker, qty, price, category, operation_type):
-        """
-        Calcula preço médio em compras e abate quantidade em vendas.
-        """
-        if qty <= 0 or price <= 0:
-            raise ValueError("Quantidade e preço devem ser maiores que zero.")
-
-        data = self.get_portfolio()
+    def save_operation(self, ticker, qty, price, cat, op_type):
         ticker = ticker.upper().strip()
-        # Formata para o padrão do Yahoo Finance
         symbol = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
+        data = self.get_data()
 
-        if symbol not in data:
-            if operation_type == "Venda":
-                raise ValueError("Não é possível vender um ativo que não está na carteira.")
-            data[symbol] = {"qty": 0, "avg_price": 0.0, "category": category}
-
-        asset = data[symbol]
-
-        if operation_type == "Compra":
-            total_invested = (asset['qty'] * asset['avg_price']) + (qty * price)
+        if op_type == "Compra":
+            if symbol not in data:
+                data[symbol] = {"qty": 0, "avg_price": 0.0, "category": cat}
+            
+            asset = data[symbol]
+            total_cost = (asset['qty'] * asset['avg_price']) + (qty * price)
             asset['qty'] += qty
-            asset['avg_price'] = total_invested / asset['qty']
-        else:
-            if qty > asset['qty']:
-                raise ValueError("Quantidade de venda superior ao saldo em carteira.")
-            asset['qty'] -= qty
+            asset['avg_price'] = total_cost / asset['qty']
+        
+        elif op_type == "Venda":
+            if symbol in data and data[symbol]['qty'] >= qty:
+                data[symbol]['qty'] -= qty
+                if data[symbol]['qty'] == 0:
+                    del data[symbol]
+            else:
+                raise ValueError("Saldo insuficiente")
 
-        # Remove o ativo se a quantidade zerar
-        if asset['qty'] <= 0:
-            del data[symbol]
-
-        self._save(data)
-
-    def _save(self, data):
-        with open(self.storage_path, 'w') as f:
+        with open(self.file_path, 'w') as f:
             json.dump(data, f, indent=4)
