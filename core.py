@@ -4,37 +4,39 @@ import os
 class FinanceEngine:
     def __init__(self, file_path='data/portfolio.json'):
         self.file_path = file_path
-        if not os.path.exists('data'):
-            os.makedirs('data')
+        os.makedirs('data', exist_ok=True)
         if not os.path.exists(self.file_path):
-            with open(self.file_path, 'w') as f:
-                json.dump({}, f)
+            self._save({})
 
-    def get_data(self):
+    def get_portfolio(self):
         with open(self.file_path, 'r') as f:
             return json.load(f)
 
-    def save_operation(self, ticker, qty, price, cat, op_type):
+    def _save(self, data):
+        with open(self.file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    def update_asset(self, ticker, qty, price, category, op_type):
         ticker = ticker.upper().strip()
         symbol = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
-        data = self.get_data()
+        data = self.get_portfolio()
 
         if op_type == "Compra":
             if symbol not in data:
-                data[symbol] = {"qty": 0, "avg_price": 0.0, "category": cat}
+                data[symbol] = {"qty": 0, "avg_price": 0.0, "category": category}
             
             asset = data[symbol]
-            total_cost = (asset['qty'] * asset['avg_price']) + (qty * price)
-            asset['qty'] += qty
-            asset['avg_price'] = total_cost / asset['qty']
+            new_qty = asset['qty'] + qty
+            asset['avg_price'] = ((asset['qty'] * asset['avg_price']) + (qty * price)) / new_qty
+            asset['qty'] = new_qty
         
         elif op_type == "Venda":
             if symbol in data and data[symbol]['qty'] >= qty:
                 data[symbol]['qty'] -= qty
-                if data[symbol]['qty'] == 0:
+                # Se zerar, remove do dicionário para não aparecer no gráfico
+                if data[symbol]['qty'] <= 0:
                     del data[symbol]
             else:
                 raise ValueError("Saldo insuficiente")
 
-        with open(self.file_path, 'w') as f:
-            json.dump(data, f, indent=4)
+        self._save(data)
