@@ -2,44 +2,57 @@ import json
 import os
 import yfinance as yf
 
-class PortfolioCore:
-    def __init__(self, path='data/portfolio.json'):
-        self.path = path
-        self._setup()
+class FinanceEngine:
+    def __init__(self, storage_path='data/portfolio.json'):
+        self.storage_path = storage_path
+        self._init_storage()
 
-    def _setup(self):
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        if not os.path.exists(self.path):
-            with open(self.path, 'w') as f:
+    def _init_storage(self):
+        """Cria a pasta e o arquivo json caso não existam."""
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        if not os.path.exists(self.storage_path):
+            with open(self.storage_path, 'w') as f:
                 json.dump({}, f)
 
-    def load(self):
-        with open(self.path, 'r') as f:
+    def get_portfolio(self):
+        with open(self.storage_path, 'r') as f:
             return json.load(f)
 
-    def save_order(self, ticker, qty, price, category, op_type):
-        # Validação de Negócio
-        if not ticker or qty <= 0:
-            raise ValueError("Dados inválidos. Verifique ticker e quantidade.")
+    def process_transaction(self, ticker, qty, price, category, operation_type):
+        """
+        Calcula preço médio em compras e abate quantidade em vendas.
+        """
+        if qty <= 0 or price <= 0:
+            raise ValueError("Quantidade e preço devem ser maiores que zero.")
 
-        db = self.load()
-        symbol = f"{ticker.upper().strip()}.SA" if not ticker.endswith(".SA") else ticker.upper()
+        data = self.get_portfolio()
+        ticker = ticker.upper().strip()
+        # Formata para o padrão do Yahoo Finance
+        symbol = f"{ticker}.SA" if not ticker.endswith(".SA") else ticker
 
-        if op_type == "Venda" and (symbol not in db or db[symbol]['qty'] < qty):
-            raise ValueError(f"Saldo insuficiente de {symbol}.")
+        if symbol not in data:
+            if operation_type == "Venda":
+                raise ValueError("Não é possível vender um ativo que não está na carteira.")
+            data[symbol] = {"qty": 0, "avg_price": 0.0, "category": category}
 
-        if symbol not in db:
-            # Normalização da categoria para evitar erros de filtro
-            db[symbol] = {"qty": 0, "avg_price": 0.0, "cat": category.strip()}
+        asset = data[symbol]
 
-        asset = db[symbol]
-        if op_type == "Compra":
-            new_total = (asset['qty'] * asset['avg_price']) + (qty * price)
+        if operation_type == "Compra":
+            total_invested = (asset['qty'] * asset['avg_price']) + (qty * price)
             asset['qty'] += qty
-            asset['avg_price'] = new_total / asset['qty']
+            asset['avg_price'] = total_invested / asset['qty']
         else:
+            if qty > asset['qty']:
+                raise ValueError("Quantidade de venda superior ao saldo em carteira.")
             asset['qty'] -= qty
 
-        with open(self.path, 'w') as f:
-            json.dump(db, f, indent=4)
-            
+        # Remove o ativo se a quantidade zerar
+        if asset['qty'] <= 0:
+            del data[symbol]
+
+        self._save(data)
+
+    def _save(self, data):
+        with open(self.storage_path, 'w') as f:
+            json.dump(data, f, indent=4)
